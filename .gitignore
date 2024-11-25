@@ -5,3 +5,4 @@ dist
 __pycache__
 trainer_info
 main.py
+data
