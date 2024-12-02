@@ -1,8 +1,9 @@
-.idea
-.venv
-build
-dist
-__pycache__
-trainer_info
-main.py
-.ruff_cache
+.idea/
+.venv/
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.ruff_cache/

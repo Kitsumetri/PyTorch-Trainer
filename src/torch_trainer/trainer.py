@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from tqdm import tqdm
 import os
@@ -6,7 +6,7 @@ import time
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from .config import TrainerConfig, set_random_seed
 from .logger import LoggerConfig, Logger
 from .hooks import HookManager, Hook
@@ -25,10 +25,6 @@ class Trainer:
         self.config = config
         self.train_dir = self._create_train_directory(config)
 
-        self.train_dataloader = train_dataloader
-        self.validation_dataloader = validation_dataloader
-        self.use_validation = validation_dataloader is not None
-
         self.model: nn.Module = model.to(self.config.device)
         self.optimizer = self.config.optimizer_type(
             model.parameters(), **self.config.optimizer_params
@@ -39,6 +35,21 @@ class Trainer:
 
         self._logger = Logger(logger_config)
         self._logger.info(f"Training directory created at: {self.train_dir}")
+
+        self.train_dataloader = train_dataloader
+        self.use_validation = True
+
+        if validation_dataloader is not None:
+            self.validation_dataloader = validation_dataloader
+            if self.config.use_auto_validation:
+                self._logger.warning("Found use_auto_validation=True, but validation dataloader was provided. Skip auto validation...")
+        elif self.config.use_auto_validation:
+            self.train_dataloader, self.validation_dataloader = self._create_train_val_dataloaders(self.train_dataloader)
+            self._logger.info('Validation datset was successfully created due to use_auto_validation=True')
+        else:
+            self.use_validation = False
+            self._logger.warning(
+                "Validation dataloader wasn't provided & use_auto_validation=False in config. Consider using auto validation.")
 
         self.hook_manager = HookManager()
         if hooks:
@@ -56,11 +67,39 @@ class Trainer:
         os.makedirs(self._train_info_dir, exist_ok=True)
         self._logger.info(f"Training info directory created: {self._train_info_dir}")
 
-    def _create_train_directory(self, config: TrainerConfig) -> str:
+    @staticmethod
+    def _create_train_directory(config: TrainerConfig) -> str:
         """Create directory for training session files."""
         train_dir = os.path.join(config.output_dir, config.train_name)
         os.makedirs(train_dir, exist_ok=True)
         return train_dir
+
+    @staticmethod
+    def _create_train_val_dataloaders(
+        train_dataloader: DataLoader, 
+        val_split: float = 0.2) -> Tuple[DataLoader, DataLoader]:
+
+        if not 0 < val_split < 1:
+            raise ValueError("val_split must be a float between 0 and 1.")
+
+        dataset = train_dataloader.dataset
+        total_len = len(dataset)
+        val_len = int(total_len * val_split)
+        train_len = total_len - val_len
+
+        train_subset, val_subset = random_split(dataset, [train_len, val_len])
+
+        batch_size = train_dataloader.batch_size
+        train_loader = DataLoader(
+            train_subset, batch_size=batch_size, shuffle=True, num_workers=train_dataloader.num_workers,
+            drop_last=True
+        )
+        val_loader = DataLoader(
+            val_subset, batch_size=batch_size, shuffle=False, num_workers=train_dataloader.num_workers,
+            drop_last=True
+        )
+
+        return train_loader, val_loader
 
     @staticmethod
     def evaluate(
