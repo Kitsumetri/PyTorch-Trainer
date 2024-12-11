@@ -179,7 +179,7 @@ class Trainer:
                     loss.backward()
                     self.optimizer.step()
 
-                    running_loss += loss.item()
+                    running_loss += loss.item()  # FIXME
                     pbar.set_postfix({"Loss": loss.item()})
                     pbar.update(1)
 
