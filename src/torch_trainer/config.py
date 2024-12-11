@@ -14,7 +14,7 @@ class TrainerConfig:
         criterion: Type[nn.Module],
         optimizer_type: Type[optim.Optimizer],
         use_auto_validation: bool = False,
-        device: Literal['auto', 'cuda', 'mps', 'cpu'] = 'cpu',
+        device: Literal['auto', 'cuda', 'mps', 'cpu'] = 'auto',
         optimizer_params: Optional[Dict[str, Any]] = None,
         console_log: bool = True,
         seed: Optional[int] = None,
