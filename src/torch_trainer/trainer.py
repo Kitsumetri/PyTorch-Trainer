@@ -10,6 +10,16 @@ from torch.utils.data import DataLoader, random_split
 from .config import TrainerConfig, set_random_seed
 from .logger import LoggerConfig, Logger
 from .hooks import HookManager, Hook
+from pathlib import Path
+from dataclasses import dataclass, field
+
+@dataclass
+class TrainHistory:
+    epoch_train_loss: List[float] = field(default_factory=lambda x: [])
+    batch_train_loss: List[float] = field(default_factory=lambda x: [])
+    validation_loss: List[float] = field(default_factory=lambda x: [])
+    train_time_per_epoch: List[int | float] = field(default_factory=lambda x: [])
+
 
 class Trainer:
     def __init__(
@@ -20,13 +30,14 @@ class Trainer:
         validation_dataloader: Optional[DataLoader] = None,
         logger_config: Optional[LoggerConfig] = None,
         hooks: Optional[List[Hook]] = None,
+        pretrained_path: Optional[str | Path] = None
     ) -> None:
         self.config = config
         self.train_dir = self._create_train_directory()
-        self.model = self._initialize_model(model)
+        self._logger = self._initialize_logger(logger_config)
+        self.model = self._initialize_model(model, pretrained_path)
         self.optimizer = self._initialize_optimizer()
         self.use_custom_train_step = hasattr(model, 'train_step')
-        self._logger = self._initialize_logger(logger_config)
         self.train_dataloader = train_dataloader
         self.use_validation = validation_dataloader is not None or self.config.use_auto_validation
         self.validation_dataloader = self._initialize_validation_dataloader(validation_dataloader)
@@ -37,9 +48,26 @@ class Trainer:
         self.validation_loss = []
         self.epoch_train_loss = []
         self.batch_train_loss = []
+        self.train_time_per_epoch = []
+    
+    def save_model(self, epoch: int, best: bool = False) -> None:
+        pretrained_path = os.path.join(self.train_dir, "pretrained")
+        os.makedirs(pretrained_path, exist_ok=True)
+        filename = f"model_epoch_{epoch}.pth" if not best else "best_model.pth"
+        filepath = os.path.join(pretrained_path, filename)
+        torch.save(self.model.state_dict(), filepath)
+        self._logger.info(f"Model saved at {filepath}")
 
-    def _initialize_model(self, model: nn.Module) -> nn.Module:
-        return model.to(self.config.device)
+    def load_model(self, model: nn.Module, filepath: str) -> None:
+        model.load_state_dict(torch.load(filepath, weights_only=True, map_location=self.config.device))
+        self._logger.info(f"Model loaded from {filepath}")
+        return model
+
+    def _initialize_model(self, model: nn.Module, pretrained_path: Optional[str | Path] = None) -> nn.Module:
+        model = model.to(self.config.device)
+        if pretrained_path is not None:
+            model = self.load_model(model, pretrained_path)
+        return model
 
     def _initialize_optimizer(self):
         return self.config.optimizer_type(self.model.parameters(), **self.config.optimizer_params)
@@ -154,9 +182,20 @@ class Trainer:
         epoch_loss = running_loss / len(self.train_dataloader.dataset)
         self.epoch_train_loss.append(epoch_loss)
         epoch_time = time.time() - start_time
+        self.train_time_per_epoch.append(epoch_time)
         self._logger.info(f"Epoch [{epoch}/{self.config.epochs}], Loss: {epoch_loss:.4f}, Time: {epoch_time:.2f}s")
         if self.use_validation:
             val_loss = self.validate()
             self.validation_loss.append(val_loss)
             self._logger.info(f"Validation Loss: {val_loss:.4f}")
         self.hook_manager.execute("on_epoch_end", trainer=self, epoch=epoch, epoch_loss=epoch_loss)
+        if epoch % self.config.save_weights_per_epoch == 0 and epoch > 0:
+            self.save_model(epoch, best=False)
+
+    def get_history(self) -> TrainHistory:
+        return TrainHistory(
+            self.epoch_train_loss, 
+            self.batch_train_loss, 
+            self.validation_loss, 
+            self.train_time_per_epoch
+        )

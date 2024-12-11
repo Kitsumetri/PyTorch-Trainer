@@ -53,7 +53,8 @@ def main() -> None:
         optimizer_type=optim.Adam,
         optimizer_params={"lr": 0.001},
         use_auto_validation=True,
-        device='auto'
+        device='auto',
+        save_weights_per_epoch=2
     )
 
     logger_config = LoggerConfig(
@@ -68,20 +69,12 @@ def main() -> None:
         train_dataloader=train_loader,
         validation_dataloader=None,
         logger_config=logger_config,
-        hooks=[TensorBoardHook()]
-    ).train()
+        hooks=[TensorBoardHook()],
+        pretrained_path='trainer_info/Net/pretrained/model_epoch_4.pth'
+    )
+    trainer.train()
 
-
-def test():
-    class Foo:
-        def bar(self):
-            return 1
-
-    t = Foo()
-    if hasattr(t, "baaar"):
-        print('Yes')
-    else:
-        print("no")
+    print(trainer.get_history().epoch_train_loss)
 
 
 if __name__ == '__main__':

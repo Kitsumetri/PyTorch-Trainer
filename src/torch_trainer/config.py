@@ -19,6 +19,7 @@ class TrainerConfig:
         console_log: bool = True,
         seed: Optional[int] = None,
         output_dir: str = "./trainer_info",
+        save_weights_per_epoch: int = 10
     ) -> None:
         self.train_name = train_name
         self.epochs = epochs
@@ -30,6 +31,7 @@ class TrainerConfig:
         self.console_log = console_log
         self.seed = seed
         self.output_dir = output_dir
+        self.save_weights_per_epoch = save_weights_per_epoch
     
     def _get_device_auto(self) -> torch.device:
         device_name = None
@@ -42,8 +44,6 @@ class TrainerConfig:
         
         return torch.device(device_name)
             
-
-
 
 class LoggerConfig:
     DEFAULT_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
