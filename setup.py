@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="torch-trainer",
-    version="0.2.0",
+    version="0.3.0",
     author="Kitsumetri",
     author_email="-",
     description="A library to simplify training models in PyTorch.",

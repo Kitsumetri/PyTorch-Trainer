@@ -2,7 +2,6 @@ import logging
 import os
 from .config import LoggerConfig
 
-
 class Logger:
     """Custom logger for the training process.
 
@@ -14,12 +13,18 @@ class Logger:
         self.config = config
         self.logger = logging.getLogger("TrainerLogger")
         self.logger.setLevel(config.level)
+        self._clear_handlers()
         self._add_file_handler()
         self._add_stream_handler()
 
+    def _clear_handlers(self) -> None:
+        """Remove all existing handlers from the logger."""
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+
     def _add_file_handler(self) -> None:
         """Add a file handler to the logger."""
-        os.makedirs(self.config.log_dir, exist_ok=True)  # Ensure log directory exists
+        os.makedirs(self.config.log_dir, exist_ok=True)
         log_file_path = os.path.join(self.config.log_dir, self.config.file_name)
         file_handler = logging.FileHandler(log_file_path)
         file_handler.setLevel(self.config.level)

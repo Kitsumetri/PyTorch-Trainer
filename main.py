@@ -75,6 +75,7 @@ def main() -> None:
     trainer.train()
 
     print(trainer.get_history().epoch_train_loss)
+    print(trainer.model)
 
 
 if __name__ == '__main__':
