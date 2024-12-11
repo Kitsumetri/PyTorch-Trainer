@@ -143,7 +143,7 @@ class Trainer:
                     loss = self.model.validation_step(batch, self.config.device, self.config.criterion, batch_idx)
                 else:
                     loss = self.__base_validation_step(batch, batch_idx)
-                running_loss += loss.item() * batch[0].size(0)
+                running_loss += loss.item()
         return running_loss / len(self.validation_dataloader.dataset)
 
     def train(self) -> None:
