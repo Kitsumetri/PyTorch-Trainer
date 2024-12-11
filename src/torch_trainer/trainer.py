@@ -179,7 +179,7 @@ class Trainer:
                     loss.backward()
                     self.optimizer.step()
 
-                    running_loss += loss.item() * batch[0].size(0)
+                    running_loss += loss.item()
                     pbar.set_postfix({"Loss": loss.item()})
                     pbar.update(1)
 
