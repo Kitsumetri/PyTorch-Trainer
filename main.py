@@ -23,32 +23,66 @@ class SimpleModel(nn.Module):
 
     def forward(self, x):
         return self.fc(x)
+    
+    def train_step(self, batch, device, criterion, batch_idx):
+        inputs, targets = batch
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+
+        outputs = self(inputs)
+        loss = criterion(outputs, targets)
+        return loss
+    
+    def validation_step(self, batch, device, criterion, batch_idx):
+        inputs, targets = batch
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+
+        outputs = self(inputs)
+        loss = criterion(outputs, targets)
+        return loss
+
+def main() -> None:
+    train_loader = create_dummy_dataset()
+    val_loader = create_dummy_dataset(samples=200)
+
+    train_config = TrainerConfig(
+        train_name='Net',
+        epochs=5,
+        criterion=nn.CrossEntropyLoss(),
+        optimizer_type=optim.Adam,
+        optimizer_params={"lr": 0.001},
+        use_auto_validation=True,
+        device='auto'
+    )
+
+    logger_config = LoggerConfig(
+        file_name="training.log",
+        format=">>> [%(asctime)s] %(module)s:%(lineno)d - [%(levelname)s] - %(message)s",
+    )
+
+    model = SimpleModel()
+    trainer = Trainer(
+        model=model,
+        config=train_config,
+        train_dataloader=train_loader,
+        validation_dataloader=None,
+        logger_config=logger_config,
+        hooks=[TensorBoardHook()]
+    ).train()
 
 
-train_loader = create_dummy_dataset()
-val_loader = create_dummy_dataset(samples=200)
+def test():
+    class Foo:
+        def bar(self):
+            return 1
 
-train_config = TrainerConfig(
-    train_name='Net',
-    epochs=5,
-    criterion=nn.CrossEntropyLoss(),
-    optimizer_type=optim.Adam,
-    optimizer_params={"lr": 0.001},
-    use_auto_validation=True,
-    device='auto'
-)
+    t = Foo()
+    if hasattr(t, "baaar"):
+        print('Yes')
+    else:
+        print("no")
 
-logger_config = LoggerConfig(
-    file_name="training.log",
-    format=">>> [%(asctime)s] %(module)s:%(lineno)d - [%(levelname)s] - %(message)s",
-)
 
-model = SimpleModel()
-trainer = Trainer(
-    model=model,
-    config=train_config,
-    train_dataloader=train_loader,
-    validation_dataloader=None,
-    logger_config=logger_config,
-    hooks=[TensorBoardHook()]
-).train()
+if __name__ == '__main__':
+    main()

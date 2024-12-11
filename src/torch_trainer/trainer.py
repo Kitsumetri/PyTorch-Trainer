@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Callable
 
 from tqdm import tqdm
 import os
@@ -30,6 +30,12 @@ class Trainer:
             model.parameters(), **self.config.optimizer_params
         )
 
+        self.use_custom_train_step = True
+        if not hasattr(model, 'train_step'):
+            self.use_custom_train_step = False
+            self._logger.warning("Consider writing trian_step(self, batch, device, criterion, batch_idx) custom method in model class")
+            self._logger.warning("Using base train_step method in train loop. It can cause errors...")
+
         if logger_config:
             logger_config.log_dir = os.path.join(self.train_dir, "logs")
 
@@ -51,6 +57,15 @@ class Trainer:
             self._logger.warning(
                 "Validation dataloader wasn't provided & use_auto_validation=False in config. Consider using auto validation.")
 
+        self._use_custom_validation_step = False
+        if self.use_validation:
+            if not hasattr(model, 'validation_step'):
+                self._logger.warning("Consider writing validation_step(self, batch, device, criterion, batch_idx) custom method in model class")
+                self._logger.warning("Using base validation_step method. It can cause errors...")
+            else:
+                self._use_custom_validation_step = True
+
+
         self.hook_manager = HookManager()
         if hooks:
             for hook in hooks:
@@ -66,6 +81,24 @@ class Trainer:
 
         os.makedirs(self._train_info_dir, exist_ok=True)
         self._logger.info(f"Training info directory created: {self._train_info_dir}")
+    
+    def __base_train_step(self, batch, batch_idx):
+        inputs, targets = batch
+        inputs = inputs.to(self.config.device)
+        targets = targets.to(self.config.device)
+
+        outputs = self.model(inputs)
+        loss = self.config.criterion(outputs, targets)
+        return loss
+    
+    def __base_validation_step(self, batch, batch_idx):
+        inputs, targets = batch
+        inputs = inputs.to(self.config.device)
+        targets = targets.to(self.config.device)
+
+        outputs = self.model(inputs)
+        loss = self.config.criterion(outputs, targets)
+        return loss
 
     @staticmethod
     def _create_train_directory(config: TrainerConfig) -> str:
@@ -101,22 +134,17 @@ class Trainer:
 
         return train_loader, val_loader
 
-    @staticmethod
-    def evaluate(
-        model: nn.Module,
-        data_loader: DataLoader,
-        criterion: nn.Module,
-        device: torch.device,
-    ) -> float:
-        model.eval()
+    def validate(self) -> float:
+        self.model.eval()
         running_loss = 0.0
         with torch.inference_mode():
-            for inputs, labels in data_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                running_loss += loss.item() * inputs.size(0)
-        return running_loss / len(data_loader.dataset)
+            for batch_idx, batch in enumerate(self.validation_dataloader):
+                if self._use_custom_validation_step:
+                    loss = self.model.validation_step(batch, self.config.device, self.config.criterion, batch_idx)
+                else:
+                    loss = self.__base_validation_step(batch, batch_idx)
+                running_loss += loss.item() * batch[0].size(0)
+        return running_loss / len(self.validation_dataloader.dataset)
 
     def train(self) -> None:
         """Main training loop."""
@@ -135,27 +163,23 @@ class Trainer:
                 desc=f"Epoch [{epoch}/{self.config.epochs}]",
                 unit="batch",
             ) as pbar:
-                for batch_idx, (inputs, labels) in enumerate(self.train_dataloader):
+                for batch_idx, batch in enumerate(self.train_dataloader):
                     self.hook_manager.execute(
                         "on_batch_start",
                         trainer=self,
                         epoch=epoch,
                         batch_idx=batch_idx,
-                        inputs=inputs,
-                        labels=labels,
-                    )
-
-                    inputs, labels = (
-                        inputs.to(self.config.device),
-                        labels.to(self.config.device),
+                        batch=batch
                     )
                     self.optimizer.zero_grad()
-                    outputs = self.model(inputs)
-                    loss = self.config.criterion(outputs, labels)
+                    if self.use_custom_train_step:
+                        loss = self.model.train_step(batch, self.config.device, self.config.criterion, batch_idx)
+                    else:
+                        loss = self.__base_train_step(batch, batch_idx)
                     loss.backward()
                     self.optimizer.step()
 
-                    running_loss += loss.item() * inputs.size(0)
+                    running_loss += loss.item() * batch[0].size(0)
                     pbar.set_postfix({"Loss": loss.item()})
                     pbar.update(1)
 
@@ -174,12 +198,7 @@ class Trainer:
             )
 
             if self.use_validation:
-                val_loss = self.evaluate(
-                    self.model,
-                    self.validation_dataloader,
-                    self.config.criterion,
-                    self.config.device,
-                )
+                val_loss = self.validate()
                 self._logger.info(f"Validation Loss: {val_loss:.4f}")
 
             self.hook_manager.execute(

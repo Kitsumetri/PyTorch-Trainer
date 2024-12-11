@@ -8,3 +8,4 @@ __pycache__/
 *.egg-info/
 .ruff_cache/
 .pytest_cache/
+trainer_info/
