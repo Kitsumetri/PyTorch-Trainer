@@ -3,6 +3,7 @@
 Simple module for comfortable fitting pytorch models. Reference to HF Trainer and PytorchLighting.
 
 ## Example
+Train for model: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 ```py
 from torch_trainer.trainer import Trainer
 from torch_trainer.config import TrainerConfig, LoggerConfig
