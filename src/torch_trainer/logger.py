@@ -1,6 +1,8 @@
 import logging
 import os
+import sys
 from .config import LoggerConfig
+import colorlog
 
 class Logger:
     """Custom logger for the training process.
@@ -14,8 +16,13 @@ class Logger:
         self.logger = logging.getLogger("TrainerLogger")
         self.logger.setLevel(config.level)
         self._clear_handlers()
-        self._add_file_handler()
-        self._add_stream_handler()
+        if self.config.file_log:
+            self._add_file_handler()
+        
+        if self.config.console_log:
+            self._add_stream_handler()
+        
+        self.logger.info(f"Logger output: console_log={self.config.console_log} | file_log={self.config.file_log}")
 
     def _clear_handlers(self) -> None:
         """Remove all existing handlers from the logger."""
@@ -35,10 +42,22 @@ class Logger:
 
     def _add_stream_handler(self) -> None:
         """Add a stream handler to the logger."""
-        stream_handler = logging.StreamHandler()
+        stream_handler = logging.StreamHandler(stream=sys.stdout)
         stream_handler.setLevel(self.config.level)
+
+        color_formatter = colorlog.ColoredFormatter(
+            '%(log_color)s' + self.config.format,
+            datefmt='%Y-%m-%d | %H:%M:%S',
+            log_colors={
+                'DEBUG': 'cyan',
+                'INFO': 'green',
+                'WARNING': 'yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'bold_red',
+            }
+        )
         stream_handler.setFormatter(
-            logging.Formatter(self.config.format, datefmt="%Y-%m-%d | %H:%M:%S")
+            color_formatter
         )
         self.logger.addHandler(stream_handler)
 

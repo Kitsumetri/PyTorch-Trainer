@@ -9,4 +9,6 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 trainer_info/
+data
 main.py
+main.ipynb
