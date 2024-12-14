@@ -6,6 +6,7 @@ import numpy as np
 import logging
 from dataclasses import dataclass, field
 
+
 class TrainerConfig:
     def __init__(
         self,
@@ -16,7 +17,7 @@ class TrainerConfig:
         do_model_compile: bool = True,
         use_amp: bool = True,
         use_auto_validation: bool = False,
-        device: Literal['auto', 'cuda', 'mps', 'cpu'] = 'auto',
+        device: Literal["auto", "cuda", "mps", "cpu"] = "auto",
         optimizer_params: Optional[Dict[str, Any]] = None,
         seed: Optional[int] = None,
         output_dir: str = "./trainer_info",
@@ -28,27 +29,31 @@ class TrainerConfig:
         self.criterion = criterion
         self.use_auto_validation = use_auto_validation
         self.optimizer_type = optimizer_type
-        self.device = self._get_device_auto() if device == 'auto' else torch.device(device)
+        self.device = (
+            self._get_device_auto() if device == "auto" else torch.device(device)
+        )
         self.optimizer_params = optimizer_params or {}
         self.seed = seed
         self.output_dir = output_dir
         self.save_weights_per_epoch = save_weights_per_epoch
         self.use_amp = use_amp
-    
+
     def _get_device_auto(self) -> torch.device:
         device_name = None
         if torch.cuda.is_available():
-            device_name = 'cuda'
+            device_name = "cuda"
         elif torch.mps.is_available():
-            device_name = 'mps'
+            device_name = "mps"
         else:
-            device_name = 'cpu'
-        
+            device_name = "cpu"
+
         return torch.device(device_name)
-            
+
 
 class LoggerConfig:
-    DEFAULT_FORMAT = ">>> [%(asctime)s] %(module)s:%(lineno)d - %(levelname)s - %(message)s"
+    DEFAULT_FORMAT = (
+        ">>> [%(asctime)s] %(module)s:%(lineno)d - %(levelname)s - %(message)s"
+    )
 
     def __init__(
         self,
@@ -56,13 +61,13 @@ class LoggerConfig:
         level: int = logging.INFO,
         console_log: bool = True,
         file_log: bool = True,
-        format: Optional[str] = None) -> None:
-
+        format: Optional[str] = None,
+    ) -> None:
         if file_log and (file_name is None or file_name.strip() is None):
             raise ValueError("Prodived file_log=True, while file_name=None")
 
         if file_name is None:
-            file_name = 'train.log'
+            file_name = "train.log"
 
         self.file_name = file_name
         self.console_log = console_log
