@@ -2,6 +2,11 @@
 
 Simple module for comfortable fitting pytorch models. Reference to HF Trainer and PytorchLighting.
 
+## Instalation
+```bash
+pip install -q -U --no-cache-dir git+https://github.com/Kitsumetri/PyTorchTrainer.git
+```
+
 ## Example
 Train for model: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 ```py
