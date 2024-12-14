@@ -83,10 +83,10 @@ def __base_train_step(self, batch, batch_idx: int) -> float:
 
 ```validation_step(batch: Any, device: str | torch.device, criterion: nn.Module, batch_idx: int) -> pytorch loss from criterion```
 Args:
-1) ```batch``` - unpacked batch from train dataloader.
+1) ```batch``` - unpacked batch from validation dataloader.
 2) ```device``` - device for training.
 3) ```criterion``` - loss function.
-4) ```batch_idx``` - number of batch in train dataloader.
+4) ```batch_idx``` - number of batch in validation dataloader.
 
 Default validation_step if model doesn't have ```validation_step()``` method:
 ```py
@@ -128,7 +128,7 @@ class TrainerConfig:
 ```
 * ```train_name``` - name of running training. All training info will be save at: ```cwd/{output_dir}/{train_name}```.
 * ```epochs```: number of epochs.
-* ```criterion``` - pytorch loss function / sublcass of nn.Module for custom loss function.
+* ```criterion``` - pytorch loss function / subclass of nn.Module for custom loss function.
 * ```optimizer_type``` - pytorch class (not object!) of optimizer / subclass of optim.Optimizer for custom optimizer.
 * ```do_model_compile``` - (default=True) bool flag for compiling model before training.
 * ```use_amp``` - (default=True). enable torch.amp features while training. This also has an impact on turning on GradScaler().
