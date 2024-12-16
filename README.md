@@ -112,7 +112,7 @@ If no validation is provided and don't use auto validation flag in config then v
 * ```logger_config``` - (default=None). LoggerConfig object. If None, then default logger will be created.
 * ```hooks``` - (default=None). List of Hooks. Hooks will be execute at different checkpoints while training/validation (see more below).
 * ```pretrained_path``` - (default=None). Path to pretrained weights of the model. If None, then model won't be loaded  from any checkpoint.
-### Trainer Config
+### TrainerConfig
 ```py
 class TrainerConfig:
     def __init__(
